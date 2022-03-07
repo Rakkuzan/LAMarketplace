@@ -1,4 +1,5 @@
 from marketplace import Market
+from sheets import Sheets
 import pprint
 
 def main():
@@ -18,6 +19,10 @@ def main():
         market.nextPage()
     pp.pprint(market.getScanedItems())
 
-if __name__ == '__main__':
-    main()
+def testing():
+    sheets = Sheets()
+    sheets.readSheet('Arkusz1!A1:C3')
 
+if __name__ == '__main__':
+    # main()
+    testing()

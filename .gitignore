@@ -1,4 +1,7 @@
+credentials.json
 .idea
 __pycache__
 screenshots
 bin/Tesseract-OCR
+ids.json
+test.py
