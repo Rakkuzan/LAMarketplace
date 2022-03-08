@@ -4,6 +4,7 @@ import pytesseract.pytesseract
 import pytesseract as pyt
 import cv2
 import time
+from datetime import datetime
 from sheets import Sheets
 
 pytesseract.pytesseract.tesseract_cmd = r'.\bin\Tesseract-OCR\tesseract.exe'
@@ -15,7 +16,6 @@ class Market:
 
         # items
         self.__firstItem__ = (250, 173, 1112, 55)  # x, y, w, h of first item on the list
-        self.__itemDims__ = (1112, 55)  # width, height
         self.__itemGap__ = 2  # gap between items
         self.__itemCnt__ = 10
 
@@ -38,6 +38,8 @@ class Market:
 
         self.__ss__ = None
         self.__marketItems__ = {}
+
+        self.__sheets__ = Sheets()
 
     def __crop__(self, img, x, y, w, h, path=None):
         im = img.crop((x, y, x + w, y + h))
@@ -66,13 +68,13 @@ class Market:
                                        config='--psm 10 --oem 3 -c tessedit_char_whitelist=0123456789/')
         else:
             text = pyt.image_to_string(im, lang='eng',
-                                       config='--psm 10 --oem 3 -c tessedit_char_whitelist=0123456789,.-')
+                                       config='--psm 10 --oem 3 -c tessedit_char_whitelist=0123456789 ,.-')
         text = text.split('\n')[0]
         return text
 
-    def __click__(self, x, y):
+    def __click__(self, x, y, delay=0.5):
         pyag.click(x, y)
-        time.sleep(1)
+        time.sleep(delay)
 
     def __scanSingleItem__(self, itemImg, whitelist=None):
         if whitelist is None:
@@ -90,7 +92,6 @@ class Market:
                                h=self.__itemElCoords__[el][3])
 
             im = self.__preprocessImg__(im)
-
             text = self.__textRecognition__(im, el)
             item.append(text)
         return item
@@ -133,7 +134,33 @@ class Market:
         self.__click__(self.__nextPageBtnCoords__[0], self.__nextPageBtnCoords__[1])
 
     def firstPage(self):
-        self.__click__(self.__firstPageBtnCoords__[0], self.__firstPageBtnCoords__[1])
+        self.__click__(self.__firstPageBtnCoords__[0], self.__firstPageBtnCoords__[1], delay=1)
 
     def refresh(self):
-        self.__click__(self.__refreshBtnCoords__[0], self.__refreshBtnCoords__[1])
+        self.__click__(self.__refreshBtnCoords__[0], self.__refreshBtnCoords__[1], delay=1)
+
+    def saveToSheets(self):
+        ts = time.time()
+        date = datetime.fromtimestamp(ts)
+        dateStr = date.strftime('%d.%m.%Y %H:%M:%S')
+
+        # prepare row1
+        row1 = self.__sheets__.readSheet('RAW DATA!A1:1')[0]
+        list_ = ['ts']
+        list_.extend(self.__marketItems__.keys())  # timestamp + marketData keys
+        row1.extend(key for key in list_ if key not in row1)  # extends row1 by list, omitting duplicated elements
+
+        # prepare row to insert
+        # makes sure elements are inserted under correct items
+        insRow = []
+        for i in range(len(row1)):
+            insRow.append('')
+        insRow[0] = dateStr
+        for key in self.__marketItems__:
+            insRow[row1.index(key)] = self.__marketItems__[key][0]  # inserting only recentPrice
+
+        self.__sheets__.updateRow(row1, 'RAW DATA!A1:1')
+        self.__sheets__.insertRow(insRow, 'RAW DATA!A2:2')
+        print(f'Saved {len(self.__marketItems__)} items')
+        self.__marketItems__ = {}
+
