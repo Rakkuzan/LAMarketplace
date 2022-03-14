@@ -145,7 +145,11 @@ class Market:
         dateStr = date.strftime('%d.%m.%Y %H:%M:%S')
 
         # prepare row1
-        row1 = self.__sheets__.readSheet('RAW DATA!A1:1')[0]
+        row1 = self.__sheets__.readSheet('RAW DATA!A1:1')
+        if(len(row1) != 0):
+            row1 = row1[0]
+
+
         list_ = ['ts']
         list_.extend(self.__marketItems__.keys())  # timestamp + marketData keys
         row1.extend(key for key in list_ if key not in row1)  # extends row1 by list, omitting duplicated elements
